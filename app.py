@@ -2,11 +2,10 @@ import streamlit as st
 import pandas as pd
 import joblib
 import os
-import matplotlib.pyplot as plt
 from xgboost import XGBRegressor
 from sklearn.pipeline import Pipeline
 
-# 1. ตั้งค่าหน้าเว็บ
+# 1. ตั้งค่าหน้าเว็บให้ดูเป็นทางการและกว้างขึ้น
 st.set_page_config(
     page_title="SmartRetail Sales Forecast AI",
     page_icon="📈",
@@ -16,17 +15,28 @@ st.set_page_config(
 # --- 2. แต่งสวยด้วย Custom CSS ---
 st.markdown("""
     <style>
-    .main { background-color: #f8f9fa; }
-    .stButton>button {
-        width: 100%; border-radius: 10px; height: 3.5em;
-        background-color: #ff4b4b; color: white; font-weight: bold;
-        transition: 0.3s;
+    .main {
+        background-color: #f8f9fa;
     }
-    .stButton>button:hover { background-color: #ff3333; border: 1px solid white; }
+    .stButton>button {
+        width: 100%;
+        border-radius: 10px;
+        height: 3em;
+        background-color: #ff4b4b;
+        color: white;
+        font-weight: bold;
+    }
     .result-card {
-        background-color: #ffffff; padding: 30px; border-radius: 15px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center;
-        border-top: 5px solid #ff4b4b;
+        background-color: #ffffff;
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    .stMetric {
+        background-color: #f1f3f6;
+        padding: 15px;
+        border-radius: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -41,26 +51,18 @@ def load_my_model():
 
 model = load_my_model()
 
-# --- 4. ส่วนหัวของแอป ---
+# --- 4. ส่วนหัวของแอป (Hero Section) ---
 col_logo, col_title = st.columns([1, 6])
 with col_logo:
     st.image("https://cdn-icons-png.flaticon.com/512/3222/3222672.png", width=80)
 with col_title:
     st.title("SmartRetail Sales Forecast AI")
-    st.caption("Intelligence System: วิเคราะห์แนวโน้มยอดขายและบริหารจัดการสต็อกด้วยเทคโนโลยี XGBoost")
+    st.caption("ระบบพยากรณ์ยอดขายอัจฉริยะ แม่นยำระดับรายวัน เพื่อการวางแผนสต็อกที่มีประสิทธิภาพ")
 
 st.markdown("---")
 
-# --- 5. ระบบ Dynamic Pricing (ค่าเริ่มต้นตามหมวดหมู่) ---
-price_defaults = {
-    'Electronics': 1500.0,
-    'Clothing': 450.0,
-    'Food': 99.0,
-    'Health': 350.0
-}
-
 if model:
-    # --- 6. เลย์เอาต์เมนู Input ---
+    # --- 5. การจัดเลย์เอาต์เมนู Input ---
     tab1, tab2 = st.tabs(["📋 ข้อมูลหลัก", "⚙️ ข้อมูลขั้นสูง"])
     
     with tab1:
@@ -72,14 +74,13 @@ if model:
             
         with c2:
             st.markdown("### 📦 ข้อมูลสต็อก")
-            inventory = st.number_input("สต็อกปัจจุบัน (In-stock)", min_value=0, value=100)
-            ordered = st.number_input("จำนวนที่สั่งเพิ่ม (Re-order)", min_value=0, value=50)
+            inventory = st.number_input("สต็อกปัจจุบัน", min_value=0, value=100)
+            ordered = st.number_input("จำนวนที่สั่งเพิ่ม", min_value=0, value=50)
             
         with c3:
             st.markdown("### 🏷️ ข้อมูลสินค้า")
-            category = st.selectbox("หมวดหมู่สินค้า", list(price_defaults.keys()))
-            # ดึงราคาตั้งต้นจาก Dictionary
-            price = st.number_input("ราคาขาย (฿)", min_value=0.0, value=price_defaults[category])
+            category = st.selectbox("หมวดหมู่สินค้า", ['Electronics', 'Clothing', 'Food', 'Health'])
+            price = st.number_input("ราคาขาย (฿)", min_value=0.0, value=199.0)
 
     with tab2:
         c4, c5, c6 = st.columns(3)
@@ -90,18 +91,18 @@ if model:
             
         with c5:
             st.markdown("### 📢 โปรโมชัน")
-            discount = st.slider("ส่วนลด (Discount Ratio)", 0.0, 1.0, 0.1, help="0.1 หมายถึงส่วนลด 10%")
-            holiday = st.selectbox("สถานะวันหยุด", options=[0, 1], format_func=lambda x: "มีโปรโมชันพิเศษ" if x == 1 else "วันปกติ")
+            discount = st.slider("ส่วนลด (Discount %)", 0.0, 1.0, 0.1)
+            holiday = st.selectbox("วันหยุด", options=[0, 1], format_func=lambda x: "วันหยุด/มีโปร" if x == 1 else "วันปกติ")
             
         with c6:
             st.markdown("### 📉 คู่แข่งและเป้าหมาย")
-            comp_price = st.number_input("ราคาคู่แข่ง (฿)", value=price - 10.0)
-            demand = st.number_input("ประมาณการ Demand", value=int(inventory * 0.8))
+            comp_price = st.number_input("ราคาคู่แข่ง", value=195.0)
+            demand = st.number_input("พยากรณ์ Demand", value=60)
             product_id = st.text_input("รหัสสินค้า", "PR001")
 
-    # --- 7. ส่วนประมวลผลการทำนาย ---
+    # --- 6. ส่วนประมวลผลการทำนาย ---
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🚀 วิเคราะห์และทำนายผลยอดขาย"):
+    if st.button("🚀 เริ่มการพยากรณ์ยอดขาย"):
         input_data = pd.DataFrame([{
             'Inventory_Level': inventory, 'Units_Ordered': ordered, 'Demand_Forecast': demand,
             'Price': price, 'Discount': discount, 'Competitor_Pricing': comp_price,
@@ -109,48 +110,43 @@ if model:
             'Category': category, 'Region': region, 'Weather_Condition': weather, 'Seasonality': season
         }])
         
-        with st.spinner('🔮 AI กำลังวิเคราะห์ความสัมพันธ์ของข้อมูล...'):
+        with st.spinner('🔮 AI กำลังคำนวณยอดขายที่เหมาะสม...'):
             prediction = model.predict(input_data)[0]
-            if prediction < 0: prediction = 0 # ป้องกันยอดขายติดลบ
         
-        # --- 8. แสดงผลลัพธ์แบบ Insight ---
+        # --- 7. แสดงผลลัพธ์แบบ "ว้าว" ---
         st.markdown(f"""
             <div class="result-card">
-                <h2 style='color: #555;'>ยอดขายที่คาดการณ์ (Next 24 Hours)</h2>
-                <h1 style='font-size: 70px; color: #ff4b4b;'>{prediction:.2f} <small style='font-size: 20px; color: #888;'>ชิ้น</small></h1>
-                <p style='color: #888;'>ความแม่นยำของโมเดล (MAE): 7.17</p>
+                <h2 style='color: #ff4b4b;'>ยอดขายพยากรณ์ (Predicted Sales)</h2>
+                <h1 style='font-size: 60px;'>{prediction:.2f} <small style='font-size: 20px;'>Units</small></h1>
             </div>
             """, unsafe_allow_html=True)
         
+        # คำแนะนำทางธุรกิจ (Business Recommendation)
         st.markdown("<br>", unsafe_allow_html=True)
         rec_col1, rec_col2 = st.columns(2)
         
         with rec_col1:
-            st.subheader("📦 Stock Analysis")
             if prediction > inventory:
-                st.error(f"🚩 **สินค้าไม่พอขาย:** คาดว่าจะขาดสต็อกประมาณ {prediction-inventory:.0f} ชิ้น")
-            elif (inventory - prediction) < 15:
-                st.warning(f"⚠️ **เฝ้าระวัง:** สต็อกปริ่มน้ำ เหลือสำรองประมาณ {inventory-prediction:.0f} ชิ้น")
+                st.error(f"🚩 **ความเสี่ยง:** สินค้าอาจขาดสต็อก! (ขาดประมาณ {prediction-inventory:.0f} ชิ้น)")
             else:
-                st.success(f"✅ **ปลอดภัย:** มีสต็อกเพียงพอ (เหลือสำรอง {inventory-prediction:.0f} ชิ้น)")
+                st.success("✅ **สถานะ:** สต็อกเพียงพอสำหรับรอบการขายนี้")
         
         with rec_col2:
-            st.subheader("💰 Pricing Strategy")
             price_gap = price - comp_price
             if price_gap > 0:
-                st.info(f"💡 **Insight:** ราคาคุณสูงกว่าคู่แข่ง {price_gap:.2f}฿ (ส่วนต่าง { (price_gap/comp_price)*100 :.1f}%)")
+                st.warning(f"💡 **แนะนำ:** ราคาคุณสูงกว่าคู่แข่ง {price_gap:.2f}฿ ลองพิจารณาเพิ่มส่วนลด")
             else:
-                st.success(f"💎 **Insight:** ราคาถูกกว่าคู่แข่ง {abs(price_gap):.2f}฿ เป็นจุดแข็งในการขาย")
+                st.info("💡 **แนะนำ:** ราคาสินค้าของคุณมีความสามารถในการแข่งขันสูง")
 
 else:
-    st.warning("⚠️ ระบบไม่พบไฟล์โมเดล 'retail_sales_model.pkl' กรุณาตรวจสอบใน GitHub Repository")
+    st.warning("⚠️ กรุณาอัปโหลดไฟล์ 'retail_sales_model.pkl' ไปยังโฟลเดอร์เดียวกับแอป")
 
-# --- 9. Sidebar ข้อมูลระบบ ---
+# --- 8. Sidebar สำหรับ Admin/Developer ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2103/2103633.png", width=80)
+    st.image("https://cdn-icons-png.flaticon.com/512/2103/2103633.png", width=100)
     st.title("System Health")
-    st.metric("Model Status", "Operational", delta="Ready")
-    st.markdown("---")
-    st.write("**Model Parameters:**")
-    st.json({"Learning Rate": 0.05, "Max Depth": 4, "Estimators": 200}) #
-    st.caption("Powered by XGBoost Machine Learning")
+    st.metric("Model Status", "Active", delta="Ready")
+    st.write("---")
+    st.write("**Model Info:**")
+    st.code("Type: XGBoost\nVersion: 3.2.0\nMAE: 7.17")
+    st.caption("Developed by SmartRetail AI Team")
